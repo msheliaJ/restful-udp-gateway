@@ -1,0 +1,22 @@
+# Build output
+build/
+server/build/
+*.o
+*.obj
+*.exe
+*.pdb
+
+# Visual Studio
+.vs/
+x64/
+Debug/
+Release/
+*.user
+
+# Downloaded at build time
+server/crow_all.h
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/

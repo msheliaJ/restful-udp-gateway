@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RESTful Cloud Service</title>
+</head>
+<body>
+    <h1>RESTful Cloud Service</h1>
+
+    <h3>Setup Connection</h3>
+    <p><input id="ip" placeholder="Client IP address"></p>
+    <p><input id="port" placeholder="Client UDP port" value="22150"></p>
+    <p><button onclick="setupConnection()">Setup Connection</button></p>
+
+    <h3>New Contact</h3>
+    <p><input id="firstName" placeholder="First Name"></p>
+    <p><input id="lastName" placeholder="Last Name"></p>
+    <p><input id="idNumber" placeholder="ID Number"></p>
+    <p><button onclick="sendContact()">Send Contact</button></p>
+
+    <h3>Last Contact</h3>
+    <p><button onclick="getLastContact()">Get Last Contact</button></p>
+
+    <h3>Response</h3>
+    <p id="response"></p>
+
+    <script>
+        const show = (text) => document.getElementById("response").textContent = text;
+        const val = (id) => document.getElementById(id).value.trim();
+
+        async function call(method, url) {
+            try {
+                const res = await fetch(url, { method });
+                show(await res.text());
+            } catch (err) {
+                show("Request failed: " + err);
+            }
+        }
+
+        function setupConnection() {
+            call("PUT", `/setup_connection/${encodeURIComponent(val("ip"))}/${encodeURIComponent(val("port"))}`);
+        }
+
+        function sendContact() {
+            const params = new URLSearchParams({
+                FirstName: val("firstName"),
+                LastName: val("lastName"),
+                IDNumber: val("idNumber")
+            });
+            call("POST", `/new_contact/?${params}`);
+        }
+
+        function getLastContact() {
+            call("GET", "/last_contact/");
+        }
+    </script>
+</body>
+</html>
