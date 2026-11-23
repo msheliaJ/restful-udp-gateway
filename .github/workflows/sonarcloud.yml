@@ -47,7 +47,7 @@ jobs:
       # still analysed (the job itself stays red).
       - name: Generate coverage.xml
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: gcovr --root . --filter 'server/main\.cpp' --filter 'server/protocol\.h' --sonarqube coverage.xml --print-summary server/build
+        run: gcovr --root . --filter 'server/main\.cpp' --filter 'common/protocol\.h' --sonarqube coverage.xml --print-summary server/build
 
       - name: Upload test and coverage reports
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}

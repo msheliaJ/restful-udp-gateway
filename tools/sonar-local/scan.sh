@@ -25,7 +25,7 @@ ctest --test-dir "$BUILD_DIR" --output-on-failure
 TEST_RESULT=$?
 
 echo "==> Coverage"
-gcovr --root . --filter 'server/main\.cpp' --filter 'server/protocol\.h' \
+gcovr --root . --filter 'server/main\.cpp' --filter 'common/protocol\.h' \
       --sonarqube coverage-local.xml --print-summary "$BUILD_DIR"
 
 echo "==> SonarScanner -> ${SONAR_HOST_URL}"
