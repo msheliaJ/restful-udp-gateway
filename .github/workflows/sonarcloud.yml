@@ -1,0 +1,65 @@
+name: SonarQube Cloud
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-scan:
+    runs-on: ubuntu-latest
+    env:
+      CROW_VERSION: v1.2.0
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # full history so SonarQube Cloud can detect new code
+
+      - name: Install build and test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends g++ cmake libasio-dev libgtest-dev gcovr
+
+      - name: Download Crow single header
+        run: curl -fsSL -o server/crow_all.h "https://github.com/CrowCpp/Crow/releases/download/${CROW_VERSION}/crow_all.h"
+
+      - name: Configure (CMake, tests + coverage, compile database)
+        run: >
+          cmake -S server -B server/build
+          -DCMAKE_BUILD_TYPE=Debug
+          -DGATEWAY_BUILD_TESTS=ON
+          -DGATEWAY_COVERAGE=ON
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Build server and tests
+        id: build
+        run: cmake --build server/build -j 4
+
+      - name: Run unit tests
+        id: tests
+        run: ctest --test-dir server/build --output-on-failure --output-junit test-results.xml
+
+      # The steps below still run when tests fail, so a failing commit is
+      # still analysed (the job itself stays red).
+      - name: Generate coverage.xml
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: gcovr --root . --filter 'server/main\.cpp' --filter 'server/protocol\.h' --sonarqube coverage.xml --print-summary server/build
+
+      - name: Upload test and coverage reports
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: commit-stage-reports
+          path: |
+            coverage.xml
+            server/build/test-results.xml
+
+      - name: SonarQube Cloud scan
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
