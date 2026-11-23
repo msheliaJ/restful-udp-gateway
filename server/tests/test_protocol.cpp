@@ -1,9 +1,8 @@
 // ============================================================================
-// Unit tests for the application-layer protocol (AppPacket) in main.cpp.
+// Unit tests for the application-layer protocol (common/protocol.h).
 //
-// The baseline server keeps everything in main.cpp, so this file includes it
-// directly and renames its main() to keep it out of the way. This lets the
-// tests run against the untouched baseline code.
+// main.cpp is included with its main() renamed so the server translation
+// unit is compiled (and measured for coverage) together with the tests.
 // ============================================================================
 #include <gtest/gtest.h>
 
@@ -21,7 +20,7 @@ namespace
 std::vector<char> Serialize(AppPacket &pkt)
 {
     int size = 0;
-    char *buf = pkt.SerializeData(size);
+    const char *buf = pkt.SerializeData(size);
     return std::vector<char>(buf, buf + size);
 }
 } // namespace
@@ -32,7 +31,7 @@ std::vector<char> Serialize(AppPacket &pkt)
 TEST(AppPacket, DataPacketHasHeaderNameAndId)
 {
     AppPacket pkt;
-    pkt.SetData("John Doe", 8, 12345);
+    pkt.SetData("John Doe", 12345);
     auto wire = Serialize(pkt);
 
     ASSERT_EQ(wire.size(), 2u + 8u + 4u);
@@ -55,7 +54,7 @@ TEST(AppPacket, RequestPacketIsHeaderOnly)
 TEST(AppPacket, RoundTripPreservesNameAndId)
 {
     AppPacket out;
-    out.SetData("Ada Lovelace", 12, 1815);
+    out.SetData("Ada Lovelace", 1815);
     auto wire = Serialize(out);
 
     AppPacket in(wire.data(), static_cast<int>(wire.size()));
@@ -68,8 +67,8 @@ TEST(AppPacket, RoundTripPreservesNameAndId)
 TEST(AppPacket, SetDataReplacesPreviousName)
 {
     AppPacket pkt;
-    pkt.SetData("First", 5, 1);
-    pkt.SetData("Second", 6, 2);
+    pkt.SetData("First", 1);
+    pkt.SetData("Second", 2);
     EXPECT_EQ(pkt.GetName(), "Second");
     EXPECT_EQ(pkt.GetIDNumber(), 2u);
 }
@@ -77,19 +76,24 @@ TEST(AppPacket, SetDataReplacesPreviousName)
 TEST(AppPacket, SetRequestClearsBody)
 {
     AppPacket pkt;
-    pkt.SetData("John", 4, 7);
+    pkt.SetData("John", 7);
     pkt.SetRequest();
     EXPECT_EQ(pkt.GetHead().Flag, 0);
     EXPECT_EQ(pkt.GetName(), "");
 }
 
-TEST(AppPacket, LongNameIsCappedAt255Bytes)
+TEST(AppPacket, NameOf255BytesFits)
 {
-    std::string longName(300, 'x');
     AppPacket pkt;
-    pkt.SetData(longName.c_str(), static_cast<int>(longName.size()), 1);
+    EXPECT_TRUE(pkt.SetData(std::string(255, 'x'), 1));
     EXPECT_EQ(pkt.GetHead().Size, 255);
-    EXPECT_EQ(pkt.GetName().size(), 255u);
+}
+
+TEST(AppPacket, NameOver255BytesIsRefusedNotTruncated)
+{
+    AppPacket pkt;
+    EXPECT_FALSE(pkt.SetData(std::string(300, 'x'), 1));
+    EXPECT_EQ(pkt.GetHead().Flag, 0); // packet left unchanged
 }
 
 // ---------------------------------------------------------------------------
@@ -123,6 +127,20 @@ TEST(AppPacket, UnknownFlagIsRejected)
     const char buf[] = {7, 0};
     AppPacket in(buf, sizeof(buf));
     EXPECT_FALSE(in.IsValid());
+}
+
+TEST(AppPacket, DataPacketWithExtraBytesIsRejected)
+{
+    const char buf[] = {1, 1, 'A', 1, 0, 0, 0, 'X'};
+    AppPacket in(buf, sizeof(buf));
+    EXPECT_FALSE(in.IsValid());
+}
+
+TEST(AppPacket, ValidRequestIsAccepted)
+{
+    const char buf[] = {0, 0};
+    AppPacket in(buf, sizeof(buf));
+    EXPECT_TRUE(in.IsValid());
 }
 
 TEST(AppPacket, RequestWithNonZeroSizeIsRejected)

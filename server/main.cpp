@@ -26,121 +26,12 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include "protocol.h"
 using namespace std;
 
-// ----------------------------------------------------------------------------
-// Application layer protocol
-// ----------------------------------------------------------------------------
-struct Header
-{
-    unsigned char Flag; // 0 = request last PersonData, 1 = data transmission
-    unsigned char Size; // number of bytes of Name (0 when Flag = 0)
-};
-
-struct PersonData
-{
-    char *Name;            // not null-terminated; length is Header.Size
-    unsigned int IDNumber; // always 4 bytes
-};
-
-struct Pkt
-{
-    Header Head;     // always present
-    PersonData Body; // only present when Flag = 1
-};
-
-// Owns the packet's dynamic memory and handles (de)serialization.
-class AppPacket
-{
-    Pkt packet;
-    char *TxBuffer;
-    bool valid;
-
-public:
-    AppPacket() : TxBuffer(nullptr), valid(true)
-    {
-        memset(&packet.Head, 0, sizeof(packet.Head));
-        packet.Body.Name = nullptr;
-        packet.Body.IDNumber = 0;
-    }
-
-    // Deserialize a received buffer. Bounds-checked against the real
-    // datagram length so a malformed packet can't cause an over-read.
-    AppPacket(const char *src, int len) : AppPacket()
-    {
-        if (len < (int)sizeof(Header)) { valid = false; return; }
-        memcpy(&packet.Head, src, sizeof(Header));
-
-        if (packet.Head.Flag == 1)
-        {
-            int needed = sizeof(Header) + packet.Head.Size + sizeof(unsigned int);
-            if (len < needed) { valid = false; return; }
-
-            packet.Body.Name = new char[packet.Head.Size];
-            memcpy(packet.Body.Name, src + sizeof(Header), packet.Head.Size);
-            memcpy(&packet.Body.IDNumber, src + sizeof(Header) + packet.Head.Size, sizeof(unsigned int));
-        }
-    }
-
-    // Owns raw pointers, so copying would double-free.
-    AppPacket(const AppPacket &) = delete;
-    AppPacket &operator=(const AppPacket &) = delete;
-
-    void SetData(const char *name, int size, unsigned int id)
-    {
-        if (size > 255) size = 255; // Size field is one byte
-        delete[] packet.Body.Name;
-        packet.Head.Flag = 1;
-        packet.Head.Size = (unsigned char)size;
-        packet.Body.Name = new char[packet.Head.Size];
-        memcpy(packet.Body.Name, name, packet.Head.Size);
-        packet.Body.IDNumber = id;
-    }
-
-    void SetRequest()
-    {
-        delete[] packet.Body.Name;
-        packet.Body.Name = nullptr;
-        packet.Head.Flag = 0;
-        packet.Head.Size = 0;
-    }
-
-    // Layout: [Header][Name bytes][IDNumber] for data, [Header] for requests.
-    char *SerializeData(int &TotalSize)
-    {
-        delete[] TxBuffer;
-
-        if (packet.Head.Flag == 1)
-        {
-            TotalSize = sizeof(Header) + packet.Head.Size + sizeof(unsigned int);
-            TxBuffer = new char[TotalSize];
-            memcpy(TxBuffer, &packet.Head, sizeof(Header));
-            memcpy(TxBuffer + sizeof(Header), packet.Body.Name, packet.Head.Size);
-            memcpy(TxBuffer + sizeof(Header) + packet.Head.Size, &packet.Body.IDNumber, sizeof(unsigned int));
-        }
-        else
-        {
-            TotalSize = sizeof(Header);
-            TxBuffer = new char[TotalSize];
-            memcpy(TxBuffer, &packet.Head, sizeof(Header));
-        }
-        return TxBuffer;
-    }
-
-    bool IsValid() const { return valid; }
-    Header GetHead() const { return packet.Head; }
-    string GetName() const
-    {
-        return packet.Body.Name ? string(packet.Body.Name, packet.Head.Size) : string();
-    }
-    unsigned int GetIDNumber() const { return packet.Body.IDNumber; }
-
-    ~AppPacket()
-    {
-        delete[] packet.Body.Name;
-        delete[] TxBuffer;
-    }
-};
+// Application layer protocol: shared with the Windows client
+using protocol::AppPacket;
+using protocol::FLAG_DATA;
 
 // ----------------------------------------------------------------------------
 // UDP connection settings (set by /setup_connection/)
@@ -246,9 +137,14 @@ int main()
         string fullname = string(firstname) + " " + string(lastname);
 
         AppPacket pkt;
-        pkt.SetData(fullname.c_str(), (int)fullname.length(), (unsigned int)id);
+        if (!pkt.SetData(fullname, (unsigned int)id))
+        {
+            // The Size field is one byte; refuse instead of silently truncating
+            TextResponse(res, 400, "Name is too long (max 255 bytes)");
+            return;
+        }
         int txSize = 0;
-        char *txBuf = pkt.SerializeData(txSize);
+        const char *txBuf = pkt.SerializeData(txSize);
 
         int udpSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
         if (udpSocket < 0)
@@ -280,7 +176,7 @@ int main()
         AppPacket request;
         request.SetRequest();
         int txSize = 0;
-        char *txBuf = request.SerializeData(txSize);
+        const char *txBuf = request.SerializeData(txSize);
 
         // Ephemeral port: the client replies to whatever address sent the request
         int udpSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -309,7 +205,7 @@ int main()
         }
 
         AppPacket response(recvBuf, bytes);
-        if (!response.IsValid() || response.GetHead().Flag != 1)
+        if (!response.IsValid() || response.GetHead().Flag != FLAG_DATA)
         {
             TextResponse(res, 502, "Malformed response from client");
             return;

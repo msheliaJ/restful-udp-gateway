@@ -24,6 +24,7 @@ flowchart LR
 | Client 1: browser UI | HTML + `fetch` | [`server/public/index.html`](server/public/index.html) |
 | Server: REST service | C++17, [Crow](https://crowcpp.org), POSIX sockets, Docker | [`server/main.cpp`](server/main.cpp) |
 | Client 2: remote client | C++17, Winsock2 (UDP) | [`client/Client.cpp`](client/Client.cpp) |
+| Shared protocol | C++17 header used by both programs | [`common/protocol.h`](common/protocol.h) |
 
 ## REST API
 
@@ -91,8 +92,7 @@ sequenceDiagram
 **1. Start the server (Docker)**
 
 ```bash
-cd server
-docker build -t restful-udp-gateway .
+docker build -f server/Dockerfile -t restful-udp-gateway .
 docker run --rm -p 28001:28001 restful-udp-gateway
 ```
 
@@ -100,7 +100,7 @@ The Dockerfile downloads the Crow single header and builds with CMake.
 
 **2. Start the Windows client**
 
-Open `client/Client.cpp` in Visual Studio as a console app and run it. You can also build it with MinGW:
+Open `client/Client.cpp` in Visual Studio as a console app (add `common/` to the include path) and run it. You can also build it with MinGW:
 
 ```bash
 g++ -std=c++17 client/Client.cpp -o Client.exe -lws2_32
@@ -118,7 +118,7 @@ It binds to UDP port **22150**.
 
 - The server is multithreaded (Crow). Shared UDP settings are protected with a mutex.
 - `/last_contact/` uses a fresh ephemeral UDP socket for each request with a receive timeout, so a missing client can't hang the HTTP request.
-- `AppPacket` owns its buffers, and copying is disabled to prevent double-free.
+- `AppPacket` lives in `common/protocol.h` and is shared by the server and client, so both sides apply the same validation. It stores its data in `std::string`/`std::vector`, so there is no manual memory management.
 
 ## Author
 

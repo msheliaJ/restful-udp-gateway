@@ -6,8 +6,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Threads REQUIRED)
 
+# Packet format shared with the Windows client
+set(PROTOCOL_DIR ${CMAKE_SOURCE_DIR}/../common)
+
 add_executable(Project main.cpp)
-target_include_directories(Project PRIVATE ${CMAKE_SOURCE_DIR})
+target_include_directories(Project PRIVATE ${CMAKE_SOURCE_DIR} ${PROTOCOL_DIR})
 target_link_libraries(Project PRIVATE Threads::Threads)
 
 # ---------------------------------------------------------------------------
@@ -22,7 +25,7 @@ if(GATEWAY_BUILD_TESTS)
     find_package(GTest REQUIRED)
 
     add_executable(gateway_tests tests/test_protocol.cpp)
-    target_include_directories(gateway_tests PRIVATE ${CMAKE_SOURCE_DIR})
+    target_include_directories(gateway_tests PRIVATE ${CMAKE_SOURCE_DIR} ${PROTOCOL_DIR})
     target_link_libraries(gateway_tests PRIVATE GTest::gtest_main Threads::Threads)
 
     if(GATEWAY_COVERAGE)
