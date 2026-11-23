@@ -7,9 +7,9 @@ cd /usr/src
 CROW_VERSION="${CROW_VERSION:-v1.2.0}"
 BUILD_DIR=server/build-local
 
-if [ ! -f server/crow_all.h ]; then
+if [[ ! -f server/crow_all.h ]]; then
     echo "==> Downloading Crow ${CROW_VERSION}"
-    curl -fsSL -o server/crow_all.h \
+    curl --proto "=https" --tlsv1.2 -fsSL -o server/crow_all.h \
         "https://github.com/CrowCpp/Crow/releases/download/${CROW_VERSION}/crow_all.h" || exit 1
 fi
 

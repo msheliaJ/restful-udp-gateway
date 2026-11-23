@@ -11,7 +11,7 @@ WORKDIR /app/server
 
 # Crow single-header release
 ARG CROW_VERSION=v1.2.0
-RUN curl -fsSL -o crow_all.h \
+RUN curl --proto "=https" --tlsv1.2 -fsSL -o crow_all.h \
     https://github.com/CrowCpp/Crow/releases/download/${CROW_VERSION}/crow_all.h
 
 COPY common /app/common
@@ -19,6 +19,10 @@ COPY server/CMakeLists.txt server/main.cpp ./
 COPY server/public ./public
 
 RUN cmake -S . -B build && cmake --build build
+
+# Build as root, run as an unprivileged user
+RUN useradd --system --no-create-home gateway
+USER gateway
 
 EXPOSE 28001
 CMD ["./build/Project"]

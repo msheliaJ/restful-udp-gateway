@@ -15,7 +15,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # SonarScanner CLI (Linux build with bundled Java runtime)
-RUN curl -fsSL -o /tmp/scanner.zip \
+RUN curl --proto "=https" --tlsv1.2 -fsSL -o /tmp/scanner.zip \
       "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SCANNER_VERSION}-linux-x64.zip" && \
     unzip -q /tmp/scanner.zip -d /opt && \
     mv /opt/sonar-scanner-${SCANNER_VERSION}-linux-x64 /opt/sonar-scanner && \
@@ -25,5 +25,7 @@ ENV PATH="/opt/sonar-scanner/bin:${PATH}"
 COPY scan.sh /usr/local/bin/scan.sh
 RUN chmod +x /usr/local/bin/scan.sh
 
+# Run the scan as the image's unprivileged "ubuntu" user, not root
+USER ubuntu
 WORKDIR /usr/src
 ENTRYPOINT ["/usr/local/bin/scan.sh"]

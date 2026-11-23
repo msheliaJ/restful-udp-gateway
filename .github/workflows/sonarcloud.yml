@@ -15,7 +15,7 @@ jobs:
       CROW_VERSION: v1.2.0
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0 # full history so SonarQube Cloud can detect new code
 
@@ -25,7 +25,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends g++ cmake libasio-dev libgtest-dev gcovr
 
       - name: Download Crow single header
-        run: curl -fsSL -o server/crow_all.h "https://github.com/CrowCpp/Crow/releases/download/${CROW_VERSION}/crow_all.h"
+        run: curl --proto "=https" --tlsv1.2 -fsSL -o server/crow_all.h "https://github.com/CrowCpp/Crow/releases/download/${CROW_VERSION}/crow_all.h"
 
       - name: Configure (CMake, tests + coverage, compile database)
         run: >
@@ -51,7 +51,7 @@ jobs:
 
       - name: Upload test and coverage reports
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: commit-stage-reports
           path: |
@@ -60,6 +60,6 @@ jobs:
 
       - name: SonarQube Cloud scan
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
