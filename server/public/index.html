@@ -8,14 +8,14 @@
     <h1>RESTful Cloud Service</h1>
 
     <h3>Setup Connection</h3>
-    <p><input id="ip" placeholder="Client IP address"></p>
-    <p><input id="port" placeholder="Client UDP port" value="22150"></p>
+    <p><label for="ip">Client IP address</label> <input id="ip" placeholder="e.g. 172.21.160.1"></p>
+    <p><label for="port">Client UDP port</label> <input id="port" value="22150"></p>
     <p><button onclick="setupConnection()">Setup Connection</button></p>
 
     <h3>New Contact</h3>
-    <p><input id="firstName" placeholder="First Name"></p>
-    <p><input id="lastName" placeholder="Last Name"></p>
-    <p><input id="idNumber" placeholder="ID Number"></p>
+    <p><label for="firstName">First name</label> <input id="firstName"></p>
+    <p><label for="lastName">Last name</label> <input id="lastName"></p>
+    <p><label for="idNumber">ID number</label> <input id="idNumber" inputmode="numeric"></p>
     <p><button onclick="sendContact()">Send Contact</button></p>
 
     <h3>Last Contact</h3>
