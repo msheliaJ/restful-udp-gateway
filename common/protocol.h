@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cstdint>
+#include <climits>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -122,5 +123,24 @@ public:
     std::string GetName() const { return name; }
     std::uint32_t GetIDNumber() const { return idNumber; }
 };
+
+// Parses a decimal ID that must fit the 4-byte IDNumber field.
+// Rejects empty strings, signs, spaces and anything above 4294967295.
+inline bool ParseIDNumber(const char *text, std::uint32_t &out)
+{
+    if (text == nullptr || *text == '\0')
+        return false;
+    std::uint64_t value = 0;
+    for (const char *p = text; *p != '\0'; ++p)
+    {
+        if (*p < '0' || *p > '9')
+            return false;
+        value = value * 10 + static_cast<std::uint64_t>(*p - '0');
+        if (value > UINT32_MAX)
+            return false;
+    }
+    out = static_cast<std::uint32_t>(value);
+    return true;
+}
 
 } // namespace protocol

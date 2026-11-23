@@ -119,11 +119,11 @@ int main()
             return;
         }
 
-        char *end = nullptr;
-        unsigned long id = strtoul(idnumber, &end, 10);
-        if (*idnumber == '\0' || *end != '\0')
+        // Must fit the 4-byte IDNumber field exactly as sent on the wire
+        uint32_t id = 0;
+        if (!protocol::ParseIDNumber(idnumber, id))
         {
-            TextResponse(res, 400, "IDNumber must be a whole number");
+            TextResponse(res, 400, "IDNumber must be a whole number from 0 to 4294967295");
             return;
         }
 
@@ -137,7 +137,7 @@ int main()
         string fullname = string(firstname) + " " + string(lastname);
 
         AppPacket pkt;
-        if (!pkt.SetData(fullname, (unsigned int)id))
+        if (!pkt.SetData(fullname, id))
         {
             // The Size field is one byte; refuse instead of silently truncating
             TextResponse(res, 400, "Name is too long (max 255 bytes)");

@@ -150,3 +150,41 @@ TEST(AppPacket, RequestWithNonZeroSizeIsRejected)
     AppPacket in(buf, sizeof(buf));
     EXPECT_FALSE(in.IsValid());
 }
+
+// ---------------------------------------------------------------------------
+// IDNumber parsing: the value confirmed to the browser must be the value
+// that goes on the wire (4-byte field)
+// ---------------------------------------------------------------------------
+TEST(ParseIDNumber, AcceptsValidRange)
+{
+    std::uint32_t id = 1;
+    EXPECT_TRUE(protocol::ParseIDNumber("0", id));
+    EXPECT_EQ(id, 0u);
+    EXPECT_TRUE(protocol::ParseIDNumber("12345", id));
+    EXPECT_EQ(id, 12345u);
+    EXPECT_TRUE(protocol::ParseIDNumber("4294967295", id));
+    EXPECT_EQ(id, 4294967295u);
+}
+
+TEST(ParseIDNumber, RejectsNegativeNumbers)
+{
+    std::uint32_t id = 0;
+    EXPECT_FALSE(protocol::ParseIDNumber("-1", id)); // strtoul wrapped this to 18446744073709551615
+}
+
+TEST(ParseIDNumber, RejectsValuesAbove32Bits)
+{
+    std::uint32_t id = 0;
+    EXPECT_FALSE(protocol::ParseIDNumber("4294967296", id)); // was sent as 0
+    EXPECT_FALSE(protocol::ParseIDNumber("99999999999", id));
+}
+
+TEST(ParseIDNumber, RejectsEmptySignsSpacesAndLetters)
+{
+    std::uint32_t id = 0;
+    EXPECT_FALSE(protocol::ParseIDNumber("", id));
+    EXPECT_FALSE(protocol::ParseIDNumber(nullptr, id));
+    EXPECT_FALSE(protocol::ParseIDNumber("+5", id));
+    EXPECT_FALSE(protocol::ParseIDNumber(" 5", id));
+    EXPECT_FALSE(protocol::ParseIDNumber("12a", id));
+}
