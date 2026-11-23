@@ -1,19 +1,17 @@
 // ============================================================================
-// Unit tests for the application-layer protocol (common/protocol.h).
-//
-// main.cpp is included with its main() renamed so the server translation
-// unit is compiled (and measured for coverage) together with the tests.
+// Unit tests for the application-layer protocol (common/protocol.h),
+// which is shared by the server and the Windows client.
 // ============================================================================
 #include <gtest/gtest.h>
 
-#define main gateway_server_main
-#include "../main.cpp"
-#undef main
+#include "protocol.h"
 
 #include <climits>
 #include <cstring>
 #include <string>
 #include <vector>
+
+using protocol::AppPacket;
 
 namespace
 {

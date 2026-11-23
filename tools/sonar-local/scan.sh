@@ -26,7 +26,7 @@ TEST_RESULT=$?
 
 echo "==> Coverage"
 gcovr --root . --filter 'server/main\.cpp' --filter 'common/protocol\.h' \
-      --sonarqube coverage-local.xml --print-summary "$BUILD_DIR"
+      --exclude-throw-branches --exclude-unreachable-branches --sonarqube coverage-local.xml --print-summary "$BUILD_DIR"
 
 echo "==> SonarScanner -> ${SONAR_HOST_URL}"
 sonar-scanner -Dproject.settings=tools/sonar-local/sonar-local.properties

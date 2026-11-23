@@ -24,7 +24,7 @@ if(GATEWAY_BUILD_TESTS)
     enable_testing()
     find_package(GTest REQUIRED)
 
-    add_executable(gateway_tests tests/test_protocol.cpp)
+    add_executable(gateway_tests tests/test_protocol.cpp tests/test_routes.cpp)
     target_include_directories(gateway_tests PRIVATE ${CMAKE_SOURCE_DIR} ${PROTOCOL_DIR})
     target_link_libraries(gateway_tests PRIVATE GTest::gtest_main Threads::Threads)
 
@@ -34,5 +34,6 @@ if(GATEWAY_BUILD_TESTS)
     endif()
 
     include(GoogleTest)
-    gtest_discover_tests(gateway_tests)
+    # Run from server/ so the "/" route can find public/index.html
+    gtest_discover_tests(gateway_tests WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endif()

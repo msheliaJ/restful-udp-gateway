@@ -79,9 +79,10 @@ static void loadFile(const string &filename, const string &contentType, crow::re
     res.end();
 }
 
-int main()
+// Registers every HTTP route on the given app. Kept separate from main()
+// so the routes can be exercised by unit tests without opening a port.
+static void RegisterRoutes(crow::SimpleApp &ProjectApp)
 {
-    crow::SimpleApp ProjectApp;
 
     // Root: the browser client UI
     CROW_ROUTE(ProjectApp, "/")
@@ -215,6 +216,12 @@ int main()
                                    " ID: " + to_string(response.GetIDNumber()));
     });
 
+}
+
+int main()
+{
+    crow::SimpleApp ProjectApp;
+    RegisterRoutes(ProjectApp);
     ProjectApp.port(HTTP_PORT).multithreaded().run();
     return 0;
 }
