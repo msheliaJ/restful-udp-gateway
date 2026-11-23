@@ -20,3 +20,9 @@ server/crow_all.h
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Analysis / coverage output
+server/build-local/
+coverage.xml
+coverage-local.xml
+.scannerwork/

@@ -1,0 +1,29 @@
+# Local SonarScanner image for the C++ server.
+#
+# The official sonarsource/sonar-scanner-cli image cannot run C/C++ analysis
+# in compilation-database mode (it has no compiler or system headers). This
+# image adds the same toolchain as the server's own Dockerfile, so the
+# compile_commands.json it generates points at headers that exist inside
+# the scanner container.
+FROM ubuntu:24.04
+
+ARG SCANNER_VERSION=6.2.1.4610
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        g++ cmake make libasio-dev libgtest-dev gcovr curl unzip ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# SonarScanner CLI (Linux build with bundled Java runtime)
+RUN curl -fsSL -o /tmp/scanner.zip \
+      "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SCANNER_VERSION}-linux-x64.zip" && \
+    unzip -q /tmp/scanner.zip -d /opt && \
+    mv /opt/sonar-scanner-${SCANNER_VERSION}-linux-x64 /opt/sonar-scanner && \
+    rm /tmp/scanner.zip
+ENV PATH="/opt/sonar-scanner/bin:${PATH}"
+
+COPY scan.sh /usr/local/bin/scan.sh
+RUN chmod +x /usr/local/bin/scan.sh
+
+WORKDIR /usr/src
+ENTRYPOINT ["/usr/local/bin/scan.sh"]
